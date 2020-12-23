@@ -768,16 +768,21 @@ def get_location_6(box_2d, dimension, rotation_x, rotation_y, rotation_z, proj_m
 def main():
 
     # 标签文件路径
-    LABEL_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/testing/label_2'
-    IMAGE_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/testing/image_2'
-    CALIB_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/testing/calib'
+    LABEL_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/training/label_2'
+    IMAGE_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/training/image_2'
+    CALIB_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/training/calib'
 
     # 读取标签文件
     label_reader = Reader(IMAGE_DIR, LABEL_DIR, CALIB_DIR)
     show_indices = label_reader.indices
+    sum_data = len(show_indices)
 
     trans_errors_norm = []
     trans_errors_single = []
+
+    count = 0
+    ap = 0
+    threshold = 20
 
     for index in show_indices:
         data_label = label_reader.data[index]
@@ -789,26 +794,28 @@ def main():
             bbox, dim, loc, r_x, r_y, r_z = [tracklet['bbox'], tracklet['dimensions'],
                                              tracklet['location'], tracklet['rotation_x'], tracklet['rotation_y'], tracklet['rotation_z']]
 
-            location = get_location_1(bbox, dim, r_x, r_y, r_z, proj_matrix)
+            location = get_location_5(bbox, dim, r_x, r_y, r_z, proj_matrix)
 
-            print('Truth pose: %s' % loc)
-            print('Estimated pose_2: %s' % location)
-            print('-------------')
+            # print('Truth pose: %s' % loc)
+            # print('Estimated pose_2: %s' % location)
+            # print('-------------')
 
             error = trans_error(loc, location)
             trans_errors_norm.append(error[0])
             trans_errors_single.append(error[1])
 
-            location = np.array(location)
+            if trans_errors_norm[0] <= threshold:
+                count += 1
+                print(count)
 
             # 画图
-            draw(image, bbox, proj_matrix, dim,
-                 loc, location, r_x, r_y, r_z)
+            # location = np.array(location)
+            # draw(image, bbox, proj_matrix, dim, loc, location, r_x, r_y, r_z)
 
-        plt.show()
+        # plt.show()
         # plt.savefig(
         #     '/Users/jellyfive/Desktop/实验/Translation/output_5/{}_proj'.format(index))
-        plt.close()
+        # plt.close()
 
     mean_trans_error_norm = np.mean(trans_errors_norm)
     mean_trans_error_single = np.mean(trans_errors_single, axis=0)
@@ -817,6 +824,7 @@ def main():
     print("\tMean Trans Errors: X: {:.3f}, Y: {:.3f}, Z: {:.3f}".format(mean_trans_error_single[0],
                                                                         mean_trans_error_single[1],
                                                                         mean_trans_error_single[2]))
+    print("\tMean Average Precision: {:.3f}".format(count / 30.0))
 
 
 if __name__ == "__main__":
