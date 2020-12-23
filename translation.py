@@ -1,98 +1,13 @@
-import os
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
 from PIL import Image
+from evaluate import trans_error
+from drawBox import draw
+from Reader import Reader
 mpl.use('QT5Agg')
 
 
-# 读取文件
-class Reader(object):
-
-    def __init__(self, image, label, calib):
-
-        # 判断路径是否存在
-        assert os.path.exists(image)
-        assert os.path.exists(label)
-        assert os.path.exists(calib)
-
-        # 存放每一个图片的路径、标签、内参
-        self.data = {}
-        # 存放标签的索引，是全局变量
-        self.indices = []
-
-        # 通过标签文件确定文件的索引，找到对应的图片以及相机内参
-        for label_file in os.listdir(label):
-            if not label_file[0] == '0':
-                continue
-            # 字典方式存放标签文件
-            data = {}
-            data['tracklets'] = []
-            # 取标签的序号作为索引
-            index = label_file.split('.')[0]
-            self.indices.append(index)
-            # 每张图片数据的路径
-            data['image_path'] = os.path.join(image, index + '.jpg')
-            # 每张图片的相机内参
-            calib_path = os.path.join(calib, index + '.txt')
-            with open(calib_path) as calib_file:
-                lines = calib_file.readlines()
-                # 读取P2相机的参数3X4的矩阵
-                data['camera_to_image'] = np.reshape(lines[2].strip().split(' ')[
-                                                     1:], (3, 4)).astype(np.float32)
-                calib_file.close()
-
-            label_path = os.path.join(label, index + '.txt')
-            with open(label_path) as label_file:
-                lines = label_file.readlines()
-                for line in lines:
-                    elements = line.split(' ')
-                    bbox = np.array(elements[4: 8], dtype=np.float32)
-                    dimensions = np.array(elements[8: 11], dtype=np.float32)
-                    location = np.array(elements[11: 14], dtype=np.float32)
-                    rotation_x = np.array(elements[14], dtype=np.float32)
-                    rotation_y = np.array(elements[15], dtype=np.float32)
-                    rotation_z = np.array(elements[16], dtype=np.float32)
-                    data['tracklets'].append({
-                        'bbox': bbox,
-                        'dimensions': dimensions,
-                        'location': location,
-                        'rotation_x': rotation_x,
-                        'rotation_y': rotation_y,
-                        'rotation_z': rotation_z
-                    })
-            # 每一个索引对应一个图片的路径、相机内参、标签。字典里面存放的字典
-            self.data[index] = data
-        return
-
-
-# 画图
-def draw_projection(corners, P2, ax, color):
-    projection = np.dot(P2, np.vstack([corners, np.ones(8, dtype=np.int32)]))
-    projection = (projection / projection[2])[:2]
-    orders = [[0, 1, 2, 3, 0],
-              [4, 5, 6, 7, 4],
-              [2, 6], [3, 7],
-              [1, 5], [0, 4]]
-    for order in orders:
-        ax.plot(projection[0, order], projection[1, order],
-                color=color, linewidth=2)
-    return
-
-
-def draw_2dbbox(bbox, ax, color):
-    xmin = bbox[0]
-    ymin = bbox[1]
-    xmax = bbox[2]
-    ymax = bbox[3]
-    ax.add_patch(plt.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin,
-                               color=color, fill=False, linewidth=2))
-    ax.text(xmin, ymin, 'building', size='x-large',
-            color='white', bbox={'facecolor': 'green', 'alpha': 1.0})
-    return
-
-
-# 获取旋转矩阵
 def get_R(rotation_x, rotation_y, rotation_z=0):
     R_x = np.array([[1, 0, 0],
                     [0, +np.cos(rotation_x), -np.sin(rotation_x)],
@@ -108,23 +23,6 @@ def get_R(rotation_x, rotation_y, rotation_z=0):
                    dtype=np.float32)
     R = np.dot(R_x, R_y)
     return R
-
-
-# 世界坐标转相机坐标
-def get_corners(dimensions, location, rotation_x, rotation_y, rotation_z):
-    # 旋转矩阵
-    R = get_R(rotation_x, rotation_y, rotation_z)
-    # print('Truth R: %s' % R)
-    # 建立世界坐标系
-    h, w, l = dimensions
-    # 世界坐标系的建立
-    x_corners = [l / 2, -l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2]
-    y_corners = [0, 0, 0, 0, -h, -h, -h, -h]
-    z_corners = [-w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2, w / 2]
-
-    corners_3D = np.dot(R, [x_corners, y_corners, z_corners])
-    corners_3D += location.reshape((3, 1))
-    return corners_3D
 
 
 def get_location_1(box_2d, dimension, rotation_x, rotation_y, rotation_z, proj_matrix):
@@ -870,61 +768,55 @@ def get_location_6(box_2d, dimension, rotation_x, rotation_y, rotation_z, proj_m
 def main():
 
     # 标签文件路径
-    LABEL_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/training/label_2'
-    IMAGE_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/training/image_2'
-    CALIB_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/training/calib'
+    LABEL_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/testing/label_2'
+    IMAGE_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/testing/image_2'
+    CALIB_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/testing/calib'
 
     # 读取标签文件
     label_reader = Reader(IMAGE_DIR, LABEL_DIR, CALIB_DIR)
     show_indices = label_reader.indices
+
+    trans_errors_norm = []
+    trans_errors_single = []
 
     for index in show_indices:
         data_label = label_reader.data[index]
 
         proj_matrix = data_label['camera_to_image']
         image = Image.open(data_label['image_path'])
-        fig = plt.figure(figsize=(8, 8))
-
-        # 绘制3DBBOX
-        ax = fig.gca()
-        ax.grid(False)
-        ax.set_axis_off()
-        ax.imshow(image)
 
         for tracklet in data_label['tracklets']:
             bbox, dim, loc, r_x, r_y, r_z = [tracklet['bbox'], tracklet['dimensions'],
                                              tracklet['location'], tracklet['rotation_x'], tracklet['rotation_y'], tracklet['rotation_z']]
 
-            location_1 = get_location_1(bbox, dim, r_x, r_y, r_z, proj_matrix)
-            location_2 = get_location_2(bbox, dim, r_x, r_y, r_z, proj_matrix)
-            location_3 = get_location_3(bbox, dim, r_x, r_y, r_z, proj_matrix)
-            location_4 = get_location_4(bbox, dim, r_x, r_y, r_z, proj_matrix)
-            location_5 = get_location_5(bbox, dim, r_x, r_y, r_z, proj_matrix)
-            location_6 = get_location_5(bbox, dim, r_x, r_y, r_z, proj_matrix)
+            location = get_location_1(bbox, dim, r_x, r_y, r_z, proj_matrix)
 
             print('Truth pose: %s' % loc)
-            print('Estimated pose_2: %s' % location_1)
-            print('Estimated pose_2: %s' % location_2)
-            print('Estimated pose_2: %s' % location_3)
-            print('Estimated pose_2: %s' % location_4)
-            print('Estimated pose_2: %s' % location_5)
-            print('Estimated pose_2: %s' % location_6)
+            print('Estimated pose_2: %s' % location)
             print('-------------')
 
-            # 获取8个顶点的世界坐标
-            truth_corners = get_corners(dim, loc, r_x, r_y, r_z)
-            location = np.array(location_6)
+            error = trans_error(loc, location)
+            trans_errors_norm.append(error[0])
+            trans_errors_single.append(error[1])
 
-            estmate_corners = get_corners(dim, location, r_x, r_y, r_z)
-            draw_projection(truth_corners, proj_matrix, ax, 'orange')  # 真实3D框
-            draw_projection(estmate_corners, proj_matrix, ax, 'red')  # 预测3D框
+            location = np.array(location)
 
-            draw_2dbbox(bbox, ax, 'green')
+            # 画图
+            draw(image, bbox, proj_matrix, dim,
+                 loc, location, r_x, r_y, r_z)
 
         plt.show()
         # plt.savefig(
         #     '/Users/jellyfive/Desktop/实验/Translation/output_5/{}_proj'.format(index))
         plt.close()
+
+    mean_trans_error_norm = np.mean(trans_errors_norm)
+    mean_trans_error_single = np.mean(trans_errors_single, axis=0)
+
+    print("\tMean Trans Error Norm: {:.3f}".format(mean_trans_error_norm))
+    print("\tMean Trans Errors: X: {:.3f}, Y: {:.3f}, Z: {:.3f}".format(mean_trans_error_single[0],
+                                                                        mean_trans_error_single[1],
+                                                                        mean_trans_error_single[2]))
 
 
 if __name__ == "__main__":

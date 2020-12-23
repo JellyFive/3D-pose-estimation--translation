@@ -28,6 +28,7 @@ share/python-wheels/
 Output/
 output_*/
 .DS_Store
+ssd-6d
 MANIFEST
 
 # PyInstaller
