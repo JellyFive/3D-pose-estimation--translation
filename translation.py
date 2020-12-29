@@ -796,9 +796,9 @@ def main():
 
             location = get_location_5(bbox, dim, r_x, r_y, r_z, proj_matrix)
 
-            # print('Truth pose: %s' % loc)
-            # print('Estimated pose_2: %s' % location)
-            # print('-------------')
+            print('Truth pose: %s' % loc)
+            print('Estimated pose_2: %s' % location)
+            print('-------------')
 
             error = trans_error(loc, location)
             trans_errors_norm.append(error[0])
