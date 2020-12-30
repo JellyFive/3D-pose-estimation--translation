@@ -94,6 +94,9 @@ if __name__ == "__main__":
     rot_errors = []
     adds = []
 
+    gt_bbox = np.array([120, 200, 400, 700])
+    est_bbox = np.array([120, 200, 400, 650])
+
     dim = np.array([2, 2, 2])
 
     gt_trans = np.array([1, 2, 3])
@@ -102,11 +105,13 @@ if __name__ == "__main__":
     gt_rot = np.array([0.5237, -0.5237, 0])
     est_rot = np.array([0.5237, -0.5537, 0])
 
-    trans_error = trans_error(gt_trans, est_trans)
-    trans_errors_norm.append(trans_error[0])
-    trans_errors_single.append(trans_error[1])
-    rot_errors.append(rot_error(gt_rot, est_rot))
-    adds.append(add_err(dim, gt_trans, est_trans, gt_rot, est_rot))
+    if iou(gt_bbox, est_bbox) >= 0.5:
+
+        trans_error = trans_error(gt_trans, est_trans)
+        trans_errors_norm.append(trans_error[0])
+        trans_errors_single.append(trans_error[1])
+        rot_errors.append(rot_error(gt_rot, est_rot))
+        adds.append(add_err(dim, gt_trans, est_trans, gt_rot, est_rot))
 
     mean_trans_error_norm = np.mean(trans_errors_norm)
     mean_trans_error_single = np.mean(trans_errors_single, axis=0)
@@ -114,8 +119,8 @@ if __name__ == "__main__":
     mean_add = np.mean(adds)
 
     print("\tMean Trans Error Norm: {:.3f}".format(mean_trans_error_norm))
+    print("\tMean Rotation Error: {:.3f}".format(mean_rot_error))
     print("\tMean Trans Errors: X: {:.3f}, Y: {:.3f}, Z: {:.3f}".format(mean_trans_error_single[0],
                                                                         mean_trans_error_single[1],
                                                                         mean_trans_error_single[2]))
-    print("\tMean Rotation Error: {:.3f}".format(mean_rot_error))
     print("\tMean ADD: {:.3f}".format(mean_add))
