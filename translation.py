@@ -5,24 +5,8 @@ from PIL import Image
 from evaluate import trans_error
 from drawBox import draw
 from Reader import Reader
+from Math import get_R
 mpl.use('QT5Agg')
-
-
-def get_R(rotation_x, rotation_y, rotation_z=0):
-    R_x = np.array([[1, 0, 0],
-                    [0, +np.cos(rotation_x), -np.sin(rotation_x)],
-                    [0, +np.sin(rotation_x), +np.cos(rotation_x)]],
-                   dtype=np.float32)
-    R_y = np.array([[+np.cos(rotation_y), 0, +np.sin(rotation_y)],
-                    [0, 1, 0],
-                    [-np.sin(rotation_y), 0, +np.cos(rotation_y)]],
-                   dtype=np.float32)
-    R_z = np.array([[+np.cos(rotation_z), -np.sin(rotation_z), 0],
-                    [+np.sin(rotation_z), +np.cos(rotation_z), 0],
-                    [0, 0, 1]],
-                   dtype=np.float32)
-    R = np.dot(R_x, R_y)
-    return R
 
 
 def get_location_1(box_2d, dimension, rotation_x, rotation_y, rotation_z, proj_matrix):
@@ -806,7 +790,6 @@ def main():
 
             if trans_errors_norm[0] <= threshold:
                 count += 1
-                print(count)
 
             # 画图
             # location = np.array(location)
