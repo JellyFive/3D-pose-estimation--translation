@@ -29,7 +29,7 @@ class Reader(object):
             index = label_file.split('.')[0]
             self.indices.append(index)
             # 每张图片数据的路径
-            data['image_path'] = os.path.join(image, index + '.jpg')
+            data['image_path'] = os.path.join(image, index + '.png')
             # 每张图片的相机内参
             calib_path = os.path.join(calib, index + '.txt')
             with open(calib_path) as calib_file:

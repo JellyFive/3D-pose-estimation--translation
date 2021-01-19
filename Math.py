@@ -15,7 +15,7 @@ def get_R(rotation_x, rotation_y, rotation_z=0):
                     [+np.sin(rotation_z), +np.cos(rotation_z), 0],
                     [0, 0, 1]],
                    dtype=np.float32)
-    R = np.dot(R_x, R_y)
+    R = np.dot(R_z, np.dot(R_x, R_y))
     return R
 
 
