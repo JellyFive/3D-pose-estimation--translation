@@ -765,8 +765,7 @@ def main():
     trans_errors_single = []
 
     count = 0
-    ap = 0
-    threshold = 20
+    sum_data = 0
 
     for index in show_indices:
         data_label = label_reader.data[index]
@@ -778,7 +777,7 @@ def main():
             bbox, dim, loc, r_x, r_y, r_z = [tracklet['bbox'], tracklet['dimensions'],
                                              tracklet['location'], tracklet['rotation_x'], tracklet['rotation_y'], tracklet['rotation_z']]
 
-            location = get_location_5(bbox, dim, r_x, r_y, r_z, proj_matrix)
+            location = get_location_4(bbox, dim, r_x, r_y, r_z, proj_matrix)
 
             print('Truth pose: %s' % loc)
             print('Estimated pose_2: %s' % location)
@@ -788,8 +787,9 @@ def main():
             trans_errors_norm.append(error[0])
             trans_errors_single.append(error[1])
 
-            if trans_errors_norm[0] <= threshold:
+            if error[1][0] <= 3 and error[1][1] <= 3 and error[1][2] <= 10:
                 count += 1
+            sum_data += 1
 
             # 画图
             # location = np.array(location)
@@ -807,7 +807,7 @@ def main():
     print("\tMean Trans Errors: X: {:.3f}, Y: {:.3f}, Z: {:.3f}".format(mean_trans_error_single[0],
                                                                         mean_trans_error_single[1],
                                                                         mean_trans_error_single[2]))
-    print("\tMean Average Precision: {:.3f}".format(count / 30.0))
+    print("\tMean Average Precision: {:.3f}".format(count / sum_data))
 
 
 if __name__ == "__main__":

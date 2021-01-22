@@ -105,13 +105,16 @@ if __name__ == "__main__":
     gt_rot = np.array([0.5237, -0.5237, 0])
     est_rot = np.array([0.5237, -0.5537, 0])
 
+    diameter = np.sqrt(np.square(dim[0])+np.square(dim[1])+np.square(dim[2]))
+
     if iou(gt_bbox, est_bbox) >= 0.5:
 
         trans_error = trans_error(gt_trans, est_trans)
         trans_errors_norm.append(trans_error[0])
         trans_errors_single.append(trans_error[1])
         rot_errors.append(rot_error(gt_rot, est_rot))
-        adds.append(add_err(dim, gt_trans, est_trans, gt_rot, est_rot))
+        adds.append(add_err(dim, gt_trans, est_trans,
+                            gt_rot, est_rot) < (0.1 * diameter))
 
     mean_trans_error_norm = np.mean(trans_errors_norm)
     mean_trans_error_single = np.mean(trans_errors_single, axis=0)
