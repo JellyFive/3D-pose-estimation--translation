@@ -32,7 +32,7 @@ def draw_2dbbox(bbox, ax, color):
     return
 
 
-def draw(image, bbox, proj_matrix, dimensions, gt_trans, est_trans, rotation_x, rotation_y, rotation_z=0):
+def draw(image, bbox, proj_matrix, dimensions, gt_trans, est_trans, rotation_x, rotation_y, rotation_z, patch, yaw, roll):
     fig = plt.figure(figsize=(8, 8))
 
     # 绘制3DBBOX
@@ -46,7 +46,7 @@ def draw(image, bbox, proj_matrix, dimensions, gt_trans, est_trans, rotation_x, 
         dimensions, gt_trans, rotation_x, rotation_y, rotation_z)
 
     est_corners = get_corners(
-        dimensions, est_trans, rotation_x, rotation_y, rotation_z)
+        dimensions, est_trans, patch, yaw, roll)
 
     draw_projection(truth_corners, proj_matrix, ax, 'orange')  # 真实3D框
     draw_projection(est_corners, proj_matrix, ax, 'red')  # 预测3D框
@@ -57,8 +57,8 @@ def draw(image, bbox, proj_matrix, dimensions, gt_trans, est_trans, rotation_x, 
 def main():
 
     # 标签文件路径
-    LABEL_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingDataTest/label_2'
-    IMAGE_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingDataTest/image_2'
+    LABEL_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/training/label_2'
+    IMAGE_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/training/image_2'
     CALIB_DIR = '/Users/jellyfive/Desktop/实验/Dataset/BuildingData/training/calib'
 
     # 读取标签文件
@@ -76,12 +76,13 @@ def main():
                                              tracklet['location'], tracklet['rotation_x'], tracklet['rotation_y'], tracklet['rotation_z']]
 
             # 画图
-            draw(image, bbox, proj_matrix, dim, loc, loc, r_x, r_y, r_z)
+            draw(image, bbox, proj_matrix, dim, loc,
+                 loc, r_x, r_y, r_z, r_x, r_y, r_z)
 
-        plt.show()
-        # plt.savefig(
-        #     '/Users/jellyfive/Desktop/实验/Translation/output_5/{}_proj'.format(index))
-        plt.close()
+        # plt.show()
+        plt.savefig(
+            '/Users/jellyfive/Desktop/实验/3D-pose-estimation--translation/output_6/{}_proj'.format(index))
+        # plt.close()
 
 
 if __name__ == "__main__":
